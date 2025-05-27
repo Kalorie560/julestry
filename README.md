@@ -129,21 +129,21 @@ src/
 ## 🧪 感情分析モデル
 
 ### 使用モデル
-**HuggingFace DistilBERT (メイン) + キーワードベース (フォールバック)**
-- **主要モデル**: `lxyuan/distilbert-base-multilingual-cased-sentiments-student`
-- **モデルタイプ**: 多言語対応DistilBERT（Transformer）
+**HuggingFace BERT (メイン) + キーワードベース (フォールバック)**
+- **主要モデル**: `LoneWolfgang/bert-for-japanese-twitter-sentiment`
+- **モデルタイプ**: 日本語特化BERT（Transformer）
 - **API**: HuggingFace Inference API
 - **分類**: 3クラス分類 (ポジティブ/ネガティブ/ニュートラル)
 - **フォールバック**: 日本語キーワードベース分析システム
 
 ### アルゴリズム詳細
 
-#### 主要分析（HuggingFace DistilBERT）
-- **モデル**: `lxyuan/distilbert-base-multilingual-cased-sentiments-student`
-- **アーキテクチャ**: DistilBERT（BERT軽量版）
-- **多言語対応**: 日本語を含む複数言語をサポート
+#### 主要分析（HuggingFace BERT）
+- **モデル**: `LoneWolfgang/bert-for-japanese-twitter-sentiment`
+- **アーキテクチャ**: BERT（日本語Twitter特化）
+- **日本語特化**: 日本語テキストに最適化されたモデル
 - **API経由**: HuggingFace Inference APIを使用
-- **出力**: ラベル（positive/negative/neutral）と信頼度スコア
+- **出力**: ラベル（LABEL_0=negative/LABEL_1=neutral/LABEL_2=positive）と動的信頼度スコア
 
 #### フォールバック分析（キーワードベース）
 APIエラー時や短文処理時に使用される日本語特化システム：
@@ -159,11 +159,22 @@ APIエラー時や短文処理時に使用される日本語特化システム�
 5. **結果統合**: タイムスタンプ付きで結果を保存
 
 #### 性能特性
-- **高精度**: 事前学習済みTransformerによる高精度分析
-- **多言語対応**: 日本語を含む複数言語に対応
+- **高精度**: 日本語特化BERT による高精度分析
+- **動的信頼度**: テキスト長と感情強度に基づく動的な信頼度計算
 - **堅牢性**: API障害時のフォールバック機能
 - **リアルタイム処理**: 非同期APIコールによる高速処理
 - **プライバシー保護**: 音声データはローカル処理のみ
+- **信頼度の多様性**: 同一感情でも文脈に応じた適切な信頼度を提供
+
+## 🔧 最近の更新
+
+### 2025年5月27日 - 感情分析信頼度バグ修正
+- **問題**: 感情分析の信頼度が同じ値になる不具合を修正
+- **修正内容**: 
+  - 動的信頼度計算アルゴリズムを実装
+  - テキスト長と感情キーワード密度に基づく適応的な信頼度計算
+  - HuggingFace APIとフォールバック分析の両方で信頼度の多様性を確保
+- **改善効果**: より正確で文脈に応じた信頼度スコアを提供
 
 ## 🐛 トラブルシューティング
 
