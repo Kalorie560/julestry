@@ -13,7 +13,9 @@ function App() {
   const { sentimentStats, sentimentResults, analyzeText, resetAnalysis, getPercentages } = useSentimentAnalysis();
   
   const handleTranscriptUpdate = useCallback((text: string) => {
-    analyzeText(text);
+    analyzeText(text).catch(error => {
+      console.error('Failed to analyze text:', error);
+    });
   }, [analyzeText]);
   
   const { recognitionState, startListening, stopListening } = useSpeechRecognition(handleTranscriptUpdate);

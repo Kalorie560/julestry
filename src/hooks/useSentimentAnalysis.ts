@@ -26,23 +26,27 @@ export const useSentimentAnalysis = () => {
     return stats;
   }, []);
 
-  const analyzeText = useCallback((text: string) => {
+  const analyzeText = useCallback(async (text: string) => {
     if (!text || text.trim().length < 3) {
       return;
     }
 
-    const result = analyzer.current.analyzeSentiment(text);
-    
-    setSentimentResults(prev => {
-      const newResults = [...prev, result];
-      // Keep only the last 100 results for performance
-      const limitedResults = newResults.slice(-100);
+    try {
+      const result = await analyzer.current.analyzeSentiment(text);
       
-      // Update stats
-      setSentimentStats(calculateStats(limitedResults));
-      
-      return limitedResults;
-    });
+      setSentimentResults(prev => {
+        const newResults = [...prev, result];
+        // Keep only the last 100 results for performance
+        const limitedResults = newResults.slice(-100);
+        
+        // Update stats
+        setSentimentStats(calculateStats(limitedResults));
+        
+        return limitedResults;
+      });
+    } catch (error) {
+      console.error('Failed to analyze sentiment:', error);
+    }
   }, [calculateStats]);
 
   const resetAnalysis = useCallback(() => {
