@@ -9,9 +9,15 @@ const HUGGINGFACE_MODEL = 'lxyuan/distilbert-base-multilingual-cased-sentiments-
 const HUGGINGFACE_API_URL = `https://api-inference.huggingface.co/models/${HUGGINGFACE_MODEL}`;
 
 export class SentimentAnalyzer {
+  public hasApiKey(): boolean {
+    const apiKey = localStorage.getItem('huggingface_api_key') || process.env.REACT_APP_HUGGINGFACE_API_KEY;
+    return !!apiKey && apiKey.trim().length > 0;
+  }
+
   private async callHuggingFaceAPI(text: string): Promise<HuggingFaceResponse[]> {
     try {
-      const apiKey = process.env.REACT_APP_HUGGINGFACE_API_KEY;
+      // Try to get API key from localStorage first, then fallback to env variable
+      const apiKey = localStorage.getItem('huggingface_api_key') || process.env.REACT_APP_HUGGINGFACE_API_KEY;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
