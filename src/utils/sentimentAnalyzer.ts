@@ -11,11 +11,18 @@ const HUGGINGFACE_API_URL = `https://api-inference.huggingface.co/models/${HUGGI
 export class SentimentAnalyzer {
   private async callHuggingFaceAPI(text: string): Promise<HuggingFaceResponse[]> {
     try {
+      const apiKey = process.env.REACT_APP_HUGGINGFACE_API_KEY;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+
       const response = await fetch(HUGGINGFACE_API_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ inputs: text }),
       });
 
@@ -39,37 +46,93 @@ export class SentimentAnalyzer {
   }
 
   private fallbackAnalysis(text: string): SentimentResult {
-    // Simple fallback based on basic keywords
-    const positiveKeywords = ['良い', '嬉しい', '楽しい', '最高', '素晴らしい', '好き'];
-    const negativeKeywords = ['悪い', '悲しい', '辛い', '最悪', '嫌い', '怒り'];
+    // Enhanced fallback analysis with better Japanese and English support
+    const positiveKeywords = [
+      // Japanese positive words
+      '良い', '嬉しい', '楽しい', '最高', '素晴らしい', '好き', '愛', '幸せ', 
+      '感謝', '安心', '満足', '成功', '勝利', '快適', '平和', '美しい',
+      'よかった', 'いいね', 'すごい', 'かわいい', '優秀', '完璧', '素敵',
+      // English positive words
+      'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 
+      'love', 'happy', 'joy', 'awesome', 'perfect', 'beautiful', 'nice',
+      'brilliant', 'outstanding', 'superb', 'marvelous', 'terrific'
+    ];
     
-    const words = text.toLowerCase();
-    let positiveCount = 0;
-    let negativeCount = 0;
+    const negativeKeywords = [
+      // Japanese negative words
+      '悪い', '悲しい', '辛い', '最悪', '嫌い', '怒り', '憎い', '不安', 
+      '失敗', '問題', '困る', '痛い', '苦しい', '疲れた', '心配', '恐怖',
+      'だめ', 'ひどい', 'むかつく', '腹立つ', '嫌だ', '最低', '絶望',
+      // English negative words
+      'bad', 'terrible', 'awful', 'horrible', 'hate', 'angry', 'sad',
+      'frustrated', 'disappointed', 'worried', 'scared', 'disgusting',
+      'annoying', 'boring', 'stupid', 'ridiculous', 'pathetic', 'worthless'
+    ];
 
+    // Enhanced analysis with punctuation and context consideration
+    const lowerText = text.toLowerCase();
+    let positiveScore = 0;
+    let negativeScore = 0;
+    let totalWords = text.split(/\s+/).length;
+
+    // Count keyword matches with weighted scoring
     positiveKeywords.forEach(keyword => {
-      if (words.includes(keyword)) positiveCount++;
+      const matches = (lowerText.match(new RegExp(keyword, 'g')) || []).length;
+      positiveScore += matches;
     });
 
     negativeKeywords.forEach(keyword => {
-      if (words.includes(keyword)) negativeCount++;
+      const matches = (lowerText.match(new RegExp(keyword, 'g')) || []).length;
+      negativeScore += matches;
     });
 
-    let sentiment: SentimentType = 'neutral';
-    let confidence = 0.3; // Lower confidence for fallback
+    // Consider punctuation patterns
+    const exclamationMarks = (text.match(/!/g) || []).length;
+    const questionMarks = (text.match(/\?/g) || []).length;
+    
+    // Boost positive sentiment for exclamation marks in positive context
+    if (positiveScore > 0 && exclamationMarks > 0) {
+      positiveScore += exclamationMarks * 0.5;
+    }
+    
+    // Consider negation patterns
+    const negationWords = ['not', 'no', 'never', 'ない', 'じゃない', 'ではない'];
+    let hasNegation = false;
+    negationWords.forEach(neg => {
+      if (lowerText.includes(neg)) hasNegation = true;
+    });
 
-    if (positiveCount > negativeCount) {
+    // Adjust scores based on negation
+    if (hasNegation) {
+      // Swap scores if negation is present
+      [positiveScore, negativeScore] = [negativeScore, positiveScore];
+    }
+
+    let sentiment: SentimentType = 'neutral';
+    let confidence = 0.5; // Start with higher baseline confidence
+
+    const totalSentimentWords = positiveScore + negativeScore;
+    const scoreDifference = Math.abs(positiveScore - negativeScore);
+
+    if (positiveScore > negativeScore) {
       sentiment = 'positive';
-      confidence = Math.min(0.7, 0.3 + (positiveCount * 0.1));
-    } else if (negativeCount > positiveCount) {
+      // Calculate confidence based on keyword density and score difference
+      confidence = Math.min(0.9, 0.5 + (scoreDifference / Math.max(totalWords, 1)) * 2 + (totalSentimentWords * 0.1));
+    } else if (negativeScore > positiveScore) {
       sentiment = 'negative';
-      confidence = Math.min(0.7, 0.3 + (negativeCount * 0.1));
+      confidence = Math.min(0.9, 0.5 + (scoreDifference / Math.max(totalWords, 1)) * 2 + (totalSentimentWords * 0.1));
+    } else if (totalSentimentWords > 0) {
+      // When scores are equal but sentiment words exist, lean towards neutral with medium confidence
+      confidence = 0.6;
+    } else {
+      // No sentiment words found
+      confidence = 0.4;
     }
 
     return {
       text: text.trim(),
       sentiment,
-      confidence,
+      confidence: Math.round(confidence * 100) / 100, // Round to 2 decimal places
       timestamp: Date.now(),
     };
   }
