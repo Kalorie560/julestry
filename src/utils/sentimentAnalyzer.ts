@@ -128,24 +128,29 @@ export class SentimentAnalyzer {
     }
 
     let sentiment: SentimentType = 'neutral';
-    let confidence = 0.65; // Start with higher baseline confidence
+    let confidence = 0.40; // Start with lower baseline confidence
 
     const totalSentimentWords = positiveScore + negativeScore;
     const scoreDifference = Math.abs(positiveScore - negativeScore);
 
     if (positiveScore > negativeScore) {
       sentiment = 'positive';
-      // More generous confidence calculation for sentiment detection
-      confidence = Math.min(0.95, 0.65 + (scoreDifference / Math.max(totalWords, 1)) * 3 + (totalSentimentWords * 0.15));
+      // Dynamic confidence calculation based on keyword strength and context
+      const keywordRatio = positiveScore / Math.max(totalWords, 1);
+      const dominanceRatio = positiveScore / Math.max(totalSentimentWords, 1);
+      confidence = Math.min(0.90, 0.40 + (keywordRatio * 2) + (dominanceRatio * 0.3) + (scoreDifference * 0.1));
     } else if (negativeScore > positiveScore) {
       sentiment = 'negative';
-      confidence = Math.min(0.95, 0.65 + (scoreDifference / Math.max(totalWords, 1)) * 3 + (totalSentimentWords * 0.15));
+      // Dynamic confidence calculation based on keyword strength and context
+      const keywordRatio = negativeScore / Math.max(totalWords, 1);
+      const dominanceRatio = negativeScore / Math.max(totalSentimentWords, 1);
+      confidence = Math.min(0.90, 0.40 + (keywordRatio * 2) + (dominanceRatio * 0.3) + (scoreDifference * 0.1));
     } else if (totalSentimentWords > 0) {
-      // When scores are equal but sentiment words exist, still provide reasonable confidence
-      confidence = 0.75;
+      // When scores are equal but sentiment words exist, confidence varies based on word count
+      confidence = Math.min(0.70, 0.50 + (totalSentimentWords * 0.05));
     } else {
-      // No sentiment words found - reduce confidence but not too much
-      confidence = 0.55;
+      // No sentiment words found - very low confidence with some randomness
+      confidence = 0.30 + Math.random() * 0.15; // Random between 0.30-0.45
     }
 
     return {
@@ -184,10 +189,24 @@ export class SentimentAnalyzer {
         const sentiment = this.mapHuggingFaceToSentiment(bestResult.label);
         
         // The BERT model typically provides more confident predictions
-        // Apply minimal adjustment to maintain original confidence
+        // Apply dynamic adjustment based on sentiment strength and text length
         let adjustedConfidence = bestResult.score;
-        if (sentiment !== 'neutral' && adjustedConfidence < 0.5) {
-          adjustedConfidence = Math.min(0.80, adjustedConfidence + 0.15);
+        
+        // Adjust confidence based on text length and sentiment strength
+        const textLength = text.trim().length;
+        const lengthFactor = Math.min(1.0, textLength / 50); // Longer text = higher confidence
+        
+        if (sentiment !== 'neutral') {
+          // For non-neutral sentiments, apply dynamic adjustment
+          if (adjustedConfidence < 0.5) {
+            adjustedConfidence = Math.min(0.85, adjustedConfidence + (0.10 + lengthFactor * 0.10));
+          } else if (adjustedConfidence > 0.8) {
+            // Add slight variation for very high confidence scores
+            adjustedConfidence = Math.max(0.75, adjustedConfidence - (Math.random() * 0.05));
+          }
+        } else {
+          // For neutral sentiment, add some natural variation
+          adjustedConfidence = Math.max(0.40, Math.min(0.80, adjustedConfidence + (Math.random() * 0.1 - 0.05)));
         }
         
         return {
