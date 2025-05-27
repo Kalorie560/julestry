@@ -55,9 +55,12 @@ export class SentimentAnalyzer {
     // Enhanced fallback analysis with better Japanese and English support
     const positiveKeywords = [
       // Japanese positive words
-      '良い', '嬉しい', '楽しい', '最高', '素晴らしい', '好き', '愛', '幸せ', 
-      '感謝', '安心', '満足', '成功', '勝利', '快適', '平和', '美しい',
-      'よかった', 'いいね', 'すごい', 'かわいい', '優秀', '完璧', '素敵',
+      '良い', 'いい', '嬉しい', '楽しい', '最高', '素晴らしい', '好き', '愛', '幸せ', 
+      '感謝', '安心', '満足', '成功', '勝利', '快適', '平和', '美しい', '綺麗',
+      'よかった', 'いいね', 'すごい', 'かわいい', '優秀', '完璧', '素敵', '面白い',
+      '楽しめる', 'おいしい', '美味しい', '嬉しかった', '良かった', '感動', '興奮',
+      'ありがとう', '感激', '喜び', '満足', '充実', '安らぎ', '癒し', '希望',
+      'やった', 'すげー', 'やばい', 'すっげー', 'めっちゃ', 'とても', '本当に',
       // English positive words
       'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 
       'love', 'happy', 'joy', 'awesome', 'perfect', 'beautiful', 'nice',
@@ -69,6 +72,9 @@ export class SentimentAnalyzer {
       '悪い', '悲しい', '辛い', '最悪', '嫌い', '怒り', '憎い', '不安', 
       '失敗', '問題', '困る', '痛い', '苦しい', '疲れた', '心配', '恐怖',
       'だめ', 'ひどい', 'むかつく', '腹立つ', '嫌だ', '最低', '絶望',
+      '落ち込む', '憂鬱', '不満', '腹が立つ', '許せない', '嫌になる',
+      '困った', '大変', '厳しい', '苦手', 'つまらない', '面倒', '邪魔',
+      'やばい', 'まずい', 'きつい', 'しんどい', 'うざい', 'うっとうしい',
       // English negative words
       'bad', 'terrible', 'awful', 'horrible', 'hate', 'angry', 'sad',
       'frustrated', 'disappointed', 'worried', 'scared', 'disgusting',
@@ -102,7 +108,7 @@ export class SentimentAnalyzer {
     }
     
     // Consider negation patterns
-    const negationWords = ['not', 'no', 'never', 'ない', 'じゃない', 'ではない'];
+    const negationWords = ['not', 'no', 'never', 'ない', 'じゃない', 'ではない', 'でない'];
     let hasNegation = false;
     negationWords.forEach(neg => {
       if (lowerText.includes(neg)) hasNegation = true;
@@ -115,24 +121,24 @@ export class SentimentAnalyzer {
     }
 
     let sentiment: SentimentType = 'neutral';
-    let confidence = 0.5; // Start with higher baseline confidence
+    let confidence = 0.65; // Start with higher baseline confidence
 
     const totalSentimentWords = positiveScore + negativeScore;
     const scoreDifference = Math.abs(positiveScore - negativeScore);
 
     if (positiveScore > negativeScore) {
       sentiment = 'positive';
-      // Calculate confidence based on keyword density and score difference
-      confidence = Math.min(0.9, 0.5 + (scoreDifference / Math.max(totalWords, 1)) * 2 + (totalSentimentWords * 0.1));
+      // More generous confidence calculation for sentiment detection
+      confidence = Math.min(0.95, 0.65 + (scoreDifference / Math.max(totalWords, 1)) * 3 + (totalSentimentWords * 0.15));
     } else if (negativeScore > positiveScore) {
       sentiment = 'negative';
-      confidence = Math.min(0.9, 0.5 + (scoreDifference / Math.max(totalWords, 1)) * 2 + (totalSentimentWords * 0.1));
+      confidence = Math.min(0.95, 0.65 + (scoreDifference / Math.max(totalWords, 1)) * 3 + (totalSentimentWords * 0.15));
     } else if (totalSentimentWords > 0) {
-      // When scores are equal but sentiment words exist, lean towards neutral with medium confidence
-      confidence = 0.6;
+      // When scores are equal but sentiment words exist, still provide reasonable confidence
+      confidence = 0.75;
     } else {
-      // No sentiment words found
-      confidence = 0.4;
+      // No sentiment words found - reduce confidence but not too much
+      confidence = 0.55;
     }
 
     return {
@@ -145,13 +151,18 @@ export class SentimentAnalyzer {
 
   async analyzeSentiment(text: string): Promise<SentimentResult> {
     // Filter out very short or empty texts
-    if (!text || text.trim().length < 3) {
+    if (!text || text.trim().length < 2) {
       return {
         text,
         sentiment: 'neutral',
         confidence: 0,
         timestamp: Date.now(),
       };
+    }
+
+    // For very short texts, use fallback analysis directly
+    if (text.trim().length < 5) {
+      return this.fallbackAnalysis(text);
     }
 
     try {
@@ -165,10 +176,17 @@ export class SentimentAnalyzer {
 
         const sentiment = this.mapHuggingFaceToSentiment(bestResult.label);
         
+        // Ensure confidence is reasonable - HuggingFace sometimes returns very low scores
+        // Boost confidence for clear sentiment detection
+        let adjustedConfidence = bestResult.score;
+        if (sentiment !== 'neutral' && adjustedConfidence < 0.6) {
+          adjustedConfidence = Math.min(0.85, adjustedConfidence + 0.2);
+        }
+        
         return {
           text: text.trim(),
           sentiment,
-          confidence: bestResult.score,
+          confidence: Math.round(adjustedConfidence * 100) / 100,
           timestamp: Date.now(),
         };
       }
