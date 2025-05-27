@@ -3,13 +3,14 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { RecordingButton } from './components/RecordingButton';
 import { AudioLevelMeter } from './components/AudioLevelMeter';
 import { SentimentChart } from './components/SentimentChart';
+import { TranscriptDisplay } from './components/TranscriptDisplay';
 import { useAudioRecording } from './hooks/useAudioRecording';
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { useSentimentAnalysis } from './hooks/useSentimentAnalysis';
 
 function App() {
   const { audioState, startRecording, stopRecording } = useAudioRecording();
-  const { sentimentStats, analyzeText, resetAnalysis, getPercentages } = useSentimentAnalysis();
+  const { sentimentStats, sentimentResults, analyzeText, resetAnalysis, getPercentages } = useSentimentAnalysis();
   
   const handleTranscriptUpdate = useCallback((text: string) => {
     analyzeText(text);
@@ -117,6 +118,15 @@ function App() {
               <SentimentChart
                 stats={sentimentStats}
                 percentages={percentages}
+              />
+            </div>
+
+            {/* Transcript Display */}
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <TranscriptDisplay
+                sentimentResults={sentimentResults}
+                currentTranscript={recognitionState.transcript}
+                isListening={recognitionState.isListening}
               />
             </div>
 
