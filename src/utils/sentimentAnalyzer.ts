@@ -77,8 +77,8 @@ export class SentimentAnalyzer {
   }
 
   private determineSentiment(score: number): SentimentType {
-    if (score > 0.3) return 'positive';
-    if (score < -0.3) return 'negative';
+    if (score > 0.1) return 'positive';
+    if (score < -0.1) return 'negative';
     return 'neutral';
   }
 
