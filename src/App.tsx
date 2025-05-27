@@ -4,6 +4,7 @@ import { RecordingButton } from './components/RecordingButton';
 import { AudioLevelMeter } from './components/AudioLevelMeter';
 import { SentimentChart } from './components/SentimentChart';
 import { TranscriptDisplay } from './components/TranscriptDisplay';
+import { ApiKeySettings } from './components/ApiKeySettings';
 import { useAudioRecording } from './hooks/useAudioRecording';
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { useSentimentAnalysis } from './hooks/useSentimentAnalysis';
@@ -79,6 +80,9 @@ function App() {
 
           {/* Main Content */}
           <div className="max-w-4xl mx-auto space-y-8">
+            {/* API Key Settings */}
+            <ApiKeySettings />
+            
             {/* Recording Section */}
             <div className="bg-white rounded-xl shadow-lg p-8">
               <div className="text-center space-y-6">
