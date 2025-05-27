@@ -5,7 +5,7 @@ interface HuggingFaceResponse {
   score: number;
 }
 
-const HUGGINGFACE_MODEL = 'lxyuan/distilbert-base-multilingual-cased-sentiments-student';
+const HUGGINGFACE_MODEL = 'LoneWolfgang/bert-for-japanese-twitter-sentiment';
 const HUGGINGFACE_API_URL = `https://api-inference.huggingface.co/models/${HUGGINGFACE_MODEL}`;
 
 export class SentimentAnalyzer {
@@ -46,6 +46,13 @@ export class SentimentAnalyzer {
 
   private mapHuggingFaceToSentiment(label: string): SentimentType {
     const lowerLabel = label.toLowerCase();
+    
+    // Handle the new BERT model's label format
+    if (label === 'LABEL_0') return 'negative';
+    if (label === 'LABEL_1') return 'neutral';
+    if (label === 'LABEL_2') return 'positive';
+    
+    // Fallback to original mapping for other models
     if (lowerLabel.includes('positive')) return 'positive';
     if (lowerLabel.includes('negative')) return 'negative';
     return 'neutral';
@@ -176,11 +183,11 @@ export class SentimentAnalyzer {
 
         const sentiment = this.mapHuggingFaceToSentiment(bestResult.label);
         
-        // Ensure confidence is reasonable - HuggingFace sometimes returns very low scores
-        // Boost confidence for clear sentiment detection
+        // The BERT model typically provides more confident predictions
+        // Apply minimal adjustment to maintain original confidence
         let adjustedConfidence = bestResult.score;
-        if (sentiment !== 'neutral' && adjustedConfidence < 0.6) {
-          adjustedConfidence = Math.min(0.85, adjustedConfidence + 0.2);
+        if (sentiment !== 'neutral' && adjustedConfidence < 0.5) {
+          adjustedConfidence = Math.min(0.80, adjustedConfidence + 0.15);
         }
         
         return {
